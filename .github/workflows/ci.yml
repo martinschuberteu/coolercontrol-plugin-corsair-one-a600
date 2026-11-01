@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      # Same versions the generated code in coolercontrol-plugin/corsair-a600/gen/ was built with.
+      - name: Install gRPC tooling
+        run: pip install grpcio==1.84.0 grpcio-tools==1.84.0 protobuf==7.36.1
+
+      - name: Syntax check
+        run: python -m compileall -q coolercontrol-plugin tools tests
+
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+
+      # The protoc bundled with pip's grpcio-tools can differ in patch version from the
+      # system protoc the checked-in code was generated with; ignore only those version stamps.
+      - name: Generated gRPC code is up to date
+        run: |
+          coolercontrol-plugin/generate.sh
+          git diff --exit-code -I '^# Protobuf Python Version: ' -I '^ +[0-9]+,$' \
+            -- coolercontrol-plugin/corsair-a600/gen
+
+      - name: Shell scripts
+        run: |
+          bash -n deploy/install.sh
+          bash -n deploy/uninstall.sh
+          bash -n coolercontrol-plugin/generate.sh

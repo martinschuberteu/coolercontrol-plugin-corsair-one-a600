@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+
+# Raw USB captures and screenshots stay local: they include unrelated devices
+# (Bluetooth) and controller serial numbers.
+*.pcap
+*.pcapng
+corsair-captures/
+corsair-captures.zip

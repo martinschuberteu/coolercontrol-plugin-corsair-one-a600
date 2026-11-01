@@ -1,0 +1,12 @@
+// SPDX-FileCopyrightText: 2025 Guy Boldon, Eren Simsek and contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+syntax = "proto3";
+
+package coolercontrol.device_service.v1;
+
+message InitializeDeviceRequest {
+  string device_id = 1;
+}
+
+message InitializeDeviceResponse {}
