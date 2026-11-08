@@ -1,0 +1,38 @@
+name: Bug report
+description: The plugin, fan control, temperatures or lighting don't work as expected.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Plugin log
+      description: "Output of `journalctl -u cc-plugin-corsair-a600 -b --no-pager | tail -100`."
+      render: text
+  - type: textarea
+    id: status
+    attributes:
+      label: Live status
+      description: "Output of `python3 tools/a600_status.py` (read-only)."
+      render: text
+  - type: input
+    id: model
+    attributes:
+      label: Corsair ONE model
+      placeholder: a600 (exact model from the label or Corsair's site)
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Plugin release, CoolerControl, distribution.
+      placeholder: v0.3.0, CoolerControl 5.1.1, CachyOS
+    validations:
+      required: true
