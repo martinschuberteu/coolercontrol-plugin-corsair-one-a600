@@ -1,6 +1,6 @@
 # Contributing
 
-Bug reports and pull requests are welcome. Questions and ideas go to [Discussions](https://github.com/martinschuberteu/coolercontrol-plugin-corsair-one-a600/discussions), security problems to [private reporting](SECURITY.md).
+Bug reports and pull requests are welcome. Ask questions and suggest ideas with the *Question or idea* issue form; report security problems through [private reporting](SECURITY.md).
 
 ## Safety first
 

@@ -1,8 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Question or idea
-    url: https://github.com/martinschuberteu/coolercontrol-plugin-corsair-one-a600/discussions
-    about: Ask questions and share ideas in Discussions.
   - name: Security problem
     url: https://github.com/martinschuberteu/coolercontrol-plugin-corsair-one-a600/security/advisories/new
     about: Report it privately, not as a public issue.
