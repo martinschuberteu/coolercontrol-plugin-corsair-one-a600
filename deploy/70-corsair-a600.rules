@@ -1,5 +1,4 @@
-# Corsair ONE a600 USB controllers: cooling (0d27) and lighting (0d18).
-# The CoolerControl plugin (as cc-plugin-user) reaches them through the corsair-a600 group;
-# the logged-in desktop user gets access too (uaccess) for status and lighting tools.
+# Corsair ONE a600 cooling controller (1b1c:0d27).
+# The CoolerControl plugin (as cc-plugin-user) reaches it through the corsair-a600 group;
+# the logged-in desktop user gets access too (uaccess) for tools/a600_status.py.
 SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1b1c", ATTRS{idProduct}=="0d27", GROUP="corsair-a600", MODE="0660", TAG+="uaccess"
-SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1b1c", ATTRS{idProduct}=="0d18", GROUP="corsair-a600", MODE="0660", TAG+="uaccess"

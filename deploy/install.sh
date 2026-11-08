@@ -11,7 +11,7 @@ PLUGIN_ID=corsair-a600
 PLUGIN_DIR=/var/lib/coolercontrol/plugins/$PLUGIN_ID
 PLUGIN_USER=cc-plugin-user   # the user CoolerControl runs unprivileged plugins as
 
-# Device access: a group that owns the two Corsair hidraw nodes.
+# Device access: a group that owns the cooling controller's hidraw node.
 install -Dm644 deploy/corsair-a600.sysusers   /etc/sysusers.d/corsair-a600.conf
 install -Dm644 deploy/70-corsair-a600.rules /etc/udev/rules.d/70-corsair-a600.rules
 systemd-sysusers /etc/sysusers.d/corsair-a600.conf

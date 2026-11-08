@@ -15,7 +15,7 @@ This is a hobby project maintained in spare time: expect a reply within about tw
 Things worth reporting include:
 
 - `deploy/install.sh` and `deploy/uninstall.sh`, which run as root,
-- the udev rule and `corsair-a600` group giving access to more than the a600 controllers,
+- the udev rule and `corsair-a600` group giving access to more than the a600 cooling controller,
 - the plugin (running as CoolerControl's unprivileged `cc-plugin-user`) accepting input from CoolerControl or its settings page that leads to unintended device commands, such as fan speeds below safe limits or writes outside the commands documented in `protocol-notes.md`.
 
 Bugs in CoolerControl itself should go to the [CoolerControl project](https://gitlab.com/coolercontrol/coolercontrol).
