@@ -1,5 +1,5 @@
 name: Bug report
-description: The plugin, fan control, temperatures or lighting don't work as expected.
+description: The plugin, fan control or temperatures don't work as expected.
 labels: [bug]
 body:
   - type: textarea
