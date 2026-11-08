@@ -26,12 +26,16 @@ The cooling controller runs Corsair's own **Quiet** and **Balanced** fan curves,
 
 Requirements: CoolerControl 5.1+, `python-grpcio`, `python-protobuf`.
 
+Install the latest [release](https://github.com/martinschuberteu/coolercontrol-plugin-corsair-one-a600/releases/latest) (replace `v0.3.0` with its tag):
+
 ```bash
 sudo pacman -S --needed python-grpcio python-protobuf
-git clone https://github.com/martinschuberteu/coolercontrol-plugin-corsair-one-a600.git
+git clone --branch v0.3.0 https://github.com/martinschuberteu/coolercontrol-plugin-corsair-one-a600.git
 cd coolercontrol-plugin-corsair-one-a600
 sudo bash deploy/install.sh
 ```
+
+`main` is the development version and may be ahead of the latest release.
 
 The installer:
 
@@ -39,6 +43,16 @@ The installer:
 2. adds CoolerControl's unprivileged `cc-plugin-user` to the group (the plugin does **not** run as root),
 3. copies the plugin to `/var/lib/coolercontrol/plugins/corsair-a600`, keeping your saved settings,
 4. restarts CoolerControl, which starts the plugin as `cc-plugin-corsair-a600.service`.
+
+To update, check out the new release tag and run the installer again (your settings are kept):
+
+```bash
+git fetch --tags
+git checkout v0.3.0   # the new tag
+sudo bash deploy/install.sh
+```
+
+To be told about new versions, use *Watch → Custom → Releases* on GitHub.
 
 Logs: `journalctl -u cc-plugin-corsair-a600 -f`. Remove everything with `sudo bash deploy/uninstall.sh`.
 

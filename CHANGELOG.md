@@ -1,8 +1,11 @@
 # Changelog
 
-## 0.3.0 – 2026-11-07
+## 0.3.0 – 2026-11-08
 
+- First public release.
 - Fans only: the plugin now handles just the cooling controller.
+
+Earlier versions were never released publicly.
 
 ## 0.2.0 – 2026-11-01
 
