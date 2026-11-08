@@ -28,8 +28,8 @@ Requirements: CoolerControl 5.1+, `python-grpcio`, `python-protobuf`.
 
 ```bash
 sudo pacman -S --needed python-grpcio python-protobuf
-git clone https://github.com/martinschuberteu/corsair-one-a600-linux.git
-cd corsair-one-a600-linux
+git clone https://github.com/martinschuberteu/coolercontrol-plugin-corsair-one-a600.git
+cd coolercontrol-plugin-corsair-one-a600
 sudo bash deploy/install.sh
 ```
 
