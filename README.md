@@ -26,11 +26,11 @@ The cooling controller runs Corsair's own **Quiet** and **Balanced** fan curves,
 
 Requirements: CoolerControl 5.1+, `python-grpcio`, `python-protobuf`.
 
-Install the latest [release](https://github.com/martinschuberteu/coolercontrol-plugin-corsair-one-a600/releases/latest) (replace `v0.3.0` with its tag):
+Install the latest [release](https://github.com/martinschuberteu/coolercontrol-plugin-corsair-one-a600/releases/latest) (replace `v0.3.1` with its tag):
 
 ```bash
 sudo pacman -S --needed python-grpcio python-protobuf
-git clone --branch v0.3.0 https://github.com/martinschuberteu/coolercontrol-plugin-corsair-one-a600.git
+git clone --branch v0.3.1 https://github.com/martinschuberteu/coolercontrol-plugin-corsair-one-a600.git
 cd coolercontrol-plugin-corsair-one-a600
 sudo bash deploy/install.sh
 ```
@@ -48,7 +48,7 @@ To update, check out the new release tag and run the installer again (your setti
 
 ```bash
 git fetch --tags
-git checkout v0.3.0   # the new tag
+git checkout v0.3.1   # the new tag
 sudo bash deploy/install.sh
 ```
 

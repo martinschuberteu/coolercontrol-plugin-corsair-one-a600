@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.1 – unreleased
+## 0.3.1 – 2026-11-10
 
 - Fixed: an unexpected error (for example a malformed controller reply) could end the temperature feed silently, leaving the fans at their last speed while the plugin still reported healthy. Every error is now logged and retried, and the plugin exits for a systemd restart if the feed ever stops.
 - A sensor that keeps failing is logged once, not every second, and its recovery is logged.

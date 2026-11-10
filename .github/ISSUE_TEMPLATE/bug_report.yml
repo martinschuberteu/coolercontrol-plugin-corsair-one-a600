@@ -33,6 +33,6 @@ body:
     attributes:
       label: Versions
       description: Plugin release, CoolerControl, distribution.
-      placeholder: v0.3.0, CoolerControl 5.1.1, CachyOS
+      placeholder: v0.3.1, CoolerControl 5.1.1, CachyOS
     validations:
       required: true
