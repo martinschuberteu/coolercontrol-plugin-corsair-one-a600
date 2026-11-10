@@ -14,7 +14,7 @@ The cooling controller runs Corsair's own **Quiet** and **Balanced** fan curves,
 
 - **a600 Cooling** device: live rpm for the five fans (also as % of their 2100 rpm maximum) and both pumps (as % of their nominal 3000 rpm), plus the temperatures being sent to the controller.
 - **Plugin page** in CoolerControl: fan mode (Balanced or Quiet). Follows the CoolerControl theme.
-- Fail-safe: if a temperature can't be read, or the plugin stops, 85 °C is sent so the fans run fast rather than idle.
+- Fail-safe: if a temperature can't be read, or the plugin is stopped normally, 85 °C is sent so the fans run fast rather than idle. If the plugin is killed or crashes, the controller keeps the last temperature it received until systemd restarts the plugin.
 
 ### Limitations
 

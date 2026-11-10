@@ -49,7 +49,7 @@ from coolercontrol.models.v1 import (  # noqa: E402
     temp_info_pb2,
 )
 
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 SOCKET = "/tmp/corsair-a600.sock"
 CONFIG_PATH = os.path.join(HERE, "config.json")
 DEFAULT_CONFIG = {"mode": "balanced"}
@@ -59,6 +59,8 @@ COOLING_ID = "a600-cooling"
 FAILSAFE_C = 85
 SMOOTHING_SAMPLES = 3
 FEED_INTERVAL_S = 1.0
+RETRY_INTERVAL_S = 5.0
+SENSOR_RETRY_S = 30.0
 MODE_CHECK_EVERY_S = 60
 
 FAN_LABELS = {"gpu1": "GPU fan 1", "gpu2": "GPU fan 2", "gpu3": "GPU fan 3",
@@ -71,11 +73,18 @@ log = logging.getLogger("corsair-a600")
 
 # ---------------------------------------------------------------- temperature sources
 
+class SensorError(Exception):
+    """A temperature can't be read right now."""
+
+
 class CpuSensor:
     """AMD Tctl from k10temp, found by name since hwmon numbers change between boots."""
 
     def __init__(self):
         self.path = None
+
+    @staticmethod
+    def _find():
         for h in glob.glob("/sys/class/hwmon/hwmon*"):
             try:
                 with open(os.path.join(h, "name")) as f:
@@ -84,40 +93,67 @@ class CpuSensor:
                 for label in glob.glob(os.path.join(h, "temp*_label")):
                     with open(label) as f:
                         if f.read().strip() == "Tctl":
-                            self.path = label.replace("_label", "_input")
+                            return label.replace("_label", "_input")
             except OSError:
                 continue
-        if not self.path:
-            log.warning("k10temp Tctl not found; CPU uses fail-safe %d °C", FAILSAFE_C)
+        return None
 
     def read(self):
         if not self.path:
-            return FAILSAFE_C
-        with open(self.path) as f:
-            return int(f.read()) / 1000
+            self.path = self._find()
+            if not self.path:
+                raise SensorError("k10temp Tctl not found")
+        try:
+            with open(self.path) as f:
+                return int(f.read()) / 1000
+        except (OSError, ValueError):
+            self.path = None  # look it up again next time
+            raise
 
 
 class GpuSensor:
-    """NVIDIA GPU temperature through NVML."""
+    """NVIDIA GPU temperature through NVML.
+
+    NVML can be unavailable for a while (driver not loaded yet at boot, driver updated
+    without a reboot, GPU reset), so a failed start is retried instead of being final.
+    """
 
     def __init__(self):
         self.lib = None
         self.handle = ctypes.c_void_p()
+        self.retry_at = 0.0
+        self.error = "not initialised"
+
+    def _init(self):
         try:
             lib = ctypes.CDLL("libnvidia-ml.so.1")
-            if lib.nvmlInit_v2() != 0 or lib.nvmlDeviceGetHandleByIndex_v2(0, ctypes.byref(self.handle)) != 0:
-                raise OSError("NVML init failed")
+            rc = lib.nvmlInit_v2()
+            if rc != 0:
+                raise SensorError(f"nvmlInit returned {rc}")
+            rc = lib.nvmlDeviceGetHandleByIndex_v2(0, ctypes.byref(self.handle))
+            if rc != 0:
+                raise SensorError(f"nvmlDeviceGetHandleByIndex returned {rc}")
             self.lib = lib
-        except OSError as e:
-            log.warning("NVIDIA temperature unavailable (%s); GPU uses fail-safe %d °C", e, FAILSAFE_C)
+        except (OSError, AttributeError) as e:
+            raise SensorError(f"NVML unavailable: {e}") from e
 
     def read(self):
         if not self.lib:
-            return FAILSAFE_C
+            if time.monotonic() < self.retry_at:
+                raise SensorError(self.error)
+            try:
+                self._init()
+            except SensorError as e:
+                self.error = str(e)
+                self.retry_at = time.monotonic() + SENSOR_RETRY_S
+                raise
         t = ctypes.c_uint()
         rc = self.lib.nvmlDeviceGetTemperature(self.handle, 0, ctypes.byref(t))
         if rc != 0:
-            raise OSError(f"nvmlDeviceGetTemperature returned {rc}")
+            self.lib = None  # start NVML again after the retry interval
+            self.error = f"nvmlDeviceGetTemperature returned {rc}"
+            self.retry_at = time.monotonic() + SENSOR_RETRY_S
+            raise SensorError(self.error)
         return float(t.value)
 
 
@@ -174,12 +210,18 @@ class Feeder(threading.Thread):
         self.stop_event = threading.Event()
         self.cooling = a600hw.Cooling()
         self.cpu, self.gpu = CpuSensor(), GpuSensor()
+        self.sensor_errors = {}
 
     def _sample(self, sensor, history, name):
         try:
             history.append(sensor.read())
-        except OSError as e:
-            log.warning("%s temperature read failed: %s", name, e)
+            if self.sensor_errors.pop(name, None):
+                log.info("%s temperature is readable again", name)
+        except (SensorError, OSError, ValueError) as e:
+            # Log each distinct failure once, not every second.
+            if self.sensor_errors.get(name) != str(e):
+                log.warning("%s temperature unavailable (%s); sending fail-safe %d °C", name, e, FAILSAFE_C)
+                self.sensor_errors[name] = str(e)
             history.append(FAILSAFE_C)
         return clamp_c(sum(history) / len(history))
 
@@ -190,9 +232,9 @@ class Feeder(threading.Thread):
         last_error = None
         while not self.stop_event.is_set():
             started = time.monotonic()
-            if self.config.reload_if_changed():
-                next_mode_check = 0.0
             try:
+                if self.config.reload_if_changed():
+                    next_mode_check = 0.0
                 if not self.cooling.connected:
                     self.cooling.open()
                     log.info("Cooling controller opened at %s", self.cooling.path)
@@ -214,33 +256,39 @@ class Feeder(threading.Thread):
                     self.state.cpu_c, self.state.gpu_c = cpu_c, gpu_c
                     self.state.connected = True
                 last_error = None
-            except OSError as e:
-                # Log each distinct failure once, so a persistent one (e.g. no permission)
-                # shows up without flooding the journal every five seconds.
+            except Exception as e:
+                # Every failure, expected (OSError) or not, is handled the same way: report it,
+                # reconnect and keep feeding. If this thread died instead, the controller would
+                # keep the last temperature and the fans would stop following load.
+                # Each distinct failure is logged once, so a persistent one (e.g. no permission)
+                # shows up without flooding the journal.
                 if str(e) != last_error:
+                    unexpected = not isinstance(e, OSError)
                     if self.cooling.connected:
-                        log.warning("Lost cooling controller: %s", e)
+                        log.warning("Lost cooling controller: %s", e, exc_info=unexpected)
                     else:
-                        log.error("Cannot use cooling controller: %s (retrying every 5 s)", e)
+                        log.error("Cannot use cooling controller: %s (retrying every %g s)",
+                                  e, RETRY_INTERVAL_S, exc_info=unexpected)
                     last_error = str(e)
                 self.cooling.close()
                 with self.state.lock:
                     self.state.connected = False
-                self.stop_event.wait(5)
+                self.stop_event.wait(RETRY_INTERVAL_S)
                 continue
             self.stop_event.wait(max(0.0, FEED_INTERVAL_S - (time.monotonic() - started)))
 
     def stop(self):
         """Stop feeding and leave a high temperature so the fans run fast while unmanaged."""
         self.stop_event.set()
-        self.join(timeout=3)
-        if self.cooling.connected:
-            try:
-                self.cooling.push_temps(FAILSAFE_C, FAILSAFE_C)
-                log.info("Sent fail-safe %d °C on stop", FAILSAFE_C)
-            except OSError:
-                pass
-            self.cooling.close()
+        self.join(timeout=1.5)
+        try:
+            if not self.cooling.connected:
+                self.cooling.open()
+            self.cooling.push_temps(FAILSAFE_C, FAILSAFE_C)
+            log.info("Sent fail-safe %d °C on stop", FAILSAFE_C)
+        except Exception as e:
+            log.warning("Could not send the fail-safe temperature on stop: %s", e)
+        self.cooling.close()
 
 
 # ---------------------------------------------------------------- gRPC service
@@ -367,14 +415,24 @@ def main():
     done = threading.Event()
     signal.signal(signal.SIGTERM, lambda *_: done.set())
     signal.signal(signal.SIGINT, lambda *_: done.set())
-    done.wait()
+    feed_died = False
+    while not done.wait(1.0):
+        if not feeder.is_alive():
+            # Should be impossible (the feed loop handles every error). Exit non-zero so
+            # systemd restarts the plugin rather than leaving the fans without a feed.
+            log.critical("Temperature feed stopped unexpectedly; exiting so the service restarts")
+            feed_died = True
+            break
 
-    server.stop(grace=1).wait()
+    # Fail-safe first: systemd only waits a few seconds before killing the plugin.
     feeder.stop()
+    server.stop(grace=1).wait()
     try:
         os.unlink(SOCKET)
     except OSError:
         pass
+    if feed_died:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
